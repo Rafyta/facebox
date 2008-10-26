@@ -122,20 +122,24 @@
       if ($('#facebox .loading').length == 1) return true
       showOverlay()
 
-      $('#facebox .content').empty()
-      $('#facebox .body').children().hide().end().
-        append('<div class="loading"><img src="'+$.facebox.settings.loadingImage+'"/></div>')
-
-      $('#facebox').css({
-        top:	getPageScroll()[1] + (getPageHeight() / 10),
-        left:	$(window).width() / 2 - 205 
-      }).show()
+      $.facebox.wait()
 
       $(document).bind('keydown.facebox', function(e) {
         if (e.keyCode == 27) $.facebox.close()
         return true
       })
       $(document).trigger('loading.facebox')
+    },
+
+    wait: function() {
+      $('#facebox .content').empty()
+      $('#facebox .body').children().hide().end().
+        append('<div class="loading"><img src="'+$.facebox.settings.loadingImage+'"/></div>')
+
+      $('#facebox').css({
+        top:	getPageScroll()[1] + (getPageHeight() / 10),
+        left:	385.5
+      }).show()      
     },
 
     reveal: function(data, klass) {
@@ -320,6 +324,7 @@
       hideOverlay()
       $('#facebox .loading').remove()
     })
+    $(document).trigger('afterClose.facebox')    
   })
 
 })(jQuery);
