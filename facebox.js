@@ -138,7 +138,8 @@
 
       $('#facebox').css({
         top:	getPageScroll()[1] + (getPageHeight() / 10),
-        left:	385.5
+        left:	$(window).width() / 2 - 205,
+				width: 410
       }).show()      
     },
 
@@ -148,7 +149,7 @@
       $('#facebox .content').append(data)
       $('#facebox .loading').remove()
       $('#facebox .body').children().fadeIn('normal')
-      $('#facebox').css('left', $(window).width() / 2 - ($('#facebox table').width() / 2))
+      $('#facebox').css({left: $(window).width() / 2 - ($('#facebox table').width() / 2), width: 'auto'})
       $(document).trigger('reveal.facebox').trigger('afterReveal.facebox')
     },
 
@@ -260,7 +261,7 @@
     if (href.match(/#/)) {
       var url    = window.location.href.split('#')[0]
       var target = href.replace(url,'')
-      $.facebox.reveal($(target).show().replaceWith("<div id='facebox_moved'></div>"), klass)
+      $.facebox.reveal($(target).clone().show(), klass)
 
     // image
     } else if (href.match($.facebox.settings.imageTypesRegexp)) {
