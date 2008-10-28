@@ -1,6 +1,5 @@
 /*
  * Facebox (for jQuery)
- * version: 1.2 (05/05/2008)
  * @requires jQuery v1.2 or later
  *
  * Examples at http://famspam.com/facebox/
@@ -82,10 +81,12 @@
 
   $.extend($.facebox, {
     settings: {
-      opacity      : 0,
+      opacity      : 0.75,
       overlay      : true,
-      loadingImage : '/facebox/loading.gif',
-      closeImage   : '/facebox/closelabel.gif',
+      loadingImage : '/images/facebox/loading.gif',
+      closeImage   : '/images/facebox/closelabel.gif',
+      previousImage: '/images/facebox/previous.png',
+      nextImage    : '/images/facebox/next.png',
       imageTypes   : [ 'png', 'jpg', 'jpeg', 'gif' ],
       faceboxHtml  : '\
     <div id="facebox" style="display:none;"> \
@@ -101,8 +102,10 @@
                 <div class="content"> \
                 </div> \
                 <div class="footer"> \
+                  <div class="navigation"></div> \
+                  <div class="info"></div> \
                   <a href="#" class="close"> \
-                    <img src="/facebox/closelabel.gif" title="close" class="close_image" /> \
+                    <img src="/images/facebox/closelabel.gif" title="close" class="close_image" /> \
                   </a> \
                 </div> \
               </td> \
@@ -117,10 +120,10 @@
     </div>'
     },
 
-    loading: function() {
+    loading: function(dontHideOverlay) {
       init()
       if ($('#facebox .loading').length == 1) return true
-      showOverlay()
+      if (!dontHideOverlay) showOverlay()
 
       $.facebox.wait()
 
@@ -132,14 +135,14 @@
     },
 
     wait: function() {
-      $('#facebox .content').empty()
+      $('#facebox .content, #facebox .info, #facebox .navigation').empty()
       $('#facebox .body').children().hide().end().
         append('<div class="loading"><img src="'+$.facebox.settings.loadingImage+'"/></div>')
 
       $('#facebox').css({
-        top:	getPageScroll()[1] + (getPageHeight() / 10),
-        left:	$(window).width() / 2 - 205,
-				width: 410
+        top:  getPageScroll()[1] + (getPageHeight() / 10),
+        left: $(window).width() / 2 - 205,
+        width: 410
       }).show()      
     },
 
@@ -166,15 +169,23 @@
   $.fn.facebox = function(settings) {
     init(settings)
 
+    var images = []
+    $(this).each(function() {
+      if (this.href.match($.facebox.settings.imageTypesRegexp) && $.inArray(this.href, images) == -1) {
+        images.push(this.href)        
+      }
+    })
+    if (images.length == 1 || images.length == 0) images = null 
+
     function clickHandler() {
-      $.facebox.loading(true)
+      $.facebox.loading()
 
       // support for rel="facebox.inline_popup" syntax, to add a class
       // also supports deprecated "facebox[.inline_popup]" syntax
       var klass = this.rel.match(/facebox\[?\.(\w+)\]?/)
       if (klass) klass = klass[1]
 
-      fillFaceboxFromHref(this.href, klass)
+      fillFaceboxFromHref(this.href, klass, images)
       return false
     }
 
@@ -218,12 +229,12 @@
     if (self.pageYOffset) {
       yScroll = self.pageYOffset;
       xScroll = self.pageXOffset;
-    } else if (document.documentElement && document.documentElement.scrollTop) {	 // Explorer 6 Strict
+    } else if (document.documentElement && document.documentElement.scrollTop) {   // Explorer 6 Strict
       yScroll = document.documentElement.scrollTop;
       xScroll = document.documentElement.scrollLeft;
     } else if (document.body) {// all other Explorers
       yScroll = document.body.scrollTop;
-      xScroll = document.body.scrollLeft;	
+      xScroll = document.body.scrollLeft; 
     }
     return new Array(xScroll,yScroll) 
   }
@@ -231,13 +242,13 @@
   // Adapted from getPageSize() by quirksmode.com
   function getPageHeight() {
     var windowHeight
-    if (self.innerHeight) {	// all except Explorer
+    if (self.innerHeight) { // all except Explorer
       windowHeight = self.innerHeight;
     } else if (document.documentElement && document.documentElement.clientHeight) { // Explorer 6 Strict Mode
       windowHeight = document.documentElement.clientHeight;
     } else if (document.body) { // other Explorers
       windowHeight = document.body.clientHeight;
-    }	
+    } 
     return windowHeight
   }
 
@@ -256,7 +267,7 @@
   //     div: #id
   //   image: blah.extension
   //    ajax: anything else
-  function fillFaceboxFromHref(href, klass) {
+  function fillFaceboxFromHref(href, klass, images) {  
     // div
     if (href.match(/#/)) {
       var url    = window.location.href.split('#')[0]
@@ -265,17 +276,46 @@
 
     // image
     } else if (href.match($.facebox.settings.imageTypesRegexp)) {
-      fillFaceboxFromImage(href, klass)
+      fillFaceboxFromImage(href, klass, images)
     // ajax
     } else {
       fillFaceboxFromAjax(href, klass)
     }
   }
 
-  function fillFaceboxFromImage(href, klass) {
+  function setupGallery(href, klass, images) {
+    var position = $.inArray(href, images)
+    var jump = function(where) {
+      $.facebox.loading(true)
+      if (where >= images.length) where = 0
+      if (where < 0) where = images.length - 1
+      fillFaceboxFromImage(images[where], klass, images)
+    }
+    
+    $('#facebox .image').click(function() { jump(position + 1); return false }).css('cursor', 'pointer').end()
+    $('#facebox .info').empty().append('Image ' + (position + 1) + ' of ' + images.length)
+    $('#facebox .navigation').empty().
+      append('<img class="prev" src="' + $.facebox.settings.previousImage + '"/>' +
+        '<img class="next" src="' + $.facebox.settings.nextImage + '"/>').
+      find('img').css('cursor', 'pointer').end().
+      find('.prev').click(function() { jump(position - 1); return false }).end().
+      find('.next').click(function() { jump(position + 1); return false }).end()
+    $(document).bind('keydown.facebox', function(e) {
+      if (e.keyCode == 39) jump(position + 1) // right
+      if (e.keyCode == 37) jump(position - 1) // left
+    })
+  }
+
+  function fillFaceboxFromImage(href, klass, images) {
     var image = new Image()
     image.onload = function() {
       $.facebox.reveal('<div class="image"><img src="' + image.src + '" /></div>', klass)
+      if (images) setupGallery(href, klass, images)
+      if (images) {
+        var position = $.inArray(href, images)
+        var next = new Image()
+        next.src = images[position+1] ? images[position+1] : images[0]
+      }
     }
     image.src = href
   }
